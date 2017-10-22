@@ -4,105 +4,99 @@
 ---
 
 **Vehicle Detection Project**
+The goal of this project is to detect and track cars on video stream.
 
 The goals / steps of this project are the following:
 
-* Perform a Histogram of Oriented Gradients (HOG) feature extraction on a labeled training set of images and train a classifier Linear SVM classifier
-* Optionally, you can also apply a color transform and append binned color features, as well as histograms of color, to your HOG feature vector. 
-* Note: for those first two steps don't forget to normalize your features and randomize a selection for training and testing.
-* Implement a sliding-window technique and use your trained classifier to search for vehicles in images.
-* Run your pipeline on a video stream (start with the test_video.mp4 and later implement on full project_video.mp4) and create a heat map of recurring detections frame by frame to reject outliers and follow detected vehicles.
-* Estimate a bounding box for vehicles detected.
+  1.Load datasets
+  2.Extract features from datasets images(HOG)
+  3.Train classifier to detect cars. (used simple default SVM with rbf kernel)
+  4.Scan video frame with sliding windows and detect hot boxes
+  5.Use hot boxes to estimate cars positions and sizes
+  6.Use hot boxes from previous steps to remove false positives hot boxes and make detection more robust
 
-[//]: # (Image References)
-[image1]: ./examples/car_not_car.png
-[image2]: ./examples/HOG_example.jpg
-[image3]: ./examples/sliding_windows.jpg
-[image4]: ./examples/sliding_window.jpg
-[image5]: ./examples/bboxes_and_heat.png
-[image6]: ./examples/labels_map.png
-[image7]: ./examples/output_bboxes.png
-[video1]: ./project_video.mp4
+Loading Datasets
 
-## [Rubric](https://review.udacity.com/#!/rubrics/513/view) Points
-###Here I will consider the rubric points individually and describe how I addressed each point in my implementation.  
+In this project I used two datasets. First is project dataset. It is splitted into cars images and non-car images. The result of this dataset is shown in cell2 and 3 of my jupyter notebook.
 
----
-###Writeup / README
+https://github.com/GirijaB/CarND-Vehicle-Detection/blob/master/vehicle_detection.ipynb  In [2]: & In [3]:
 
-####1. Provide a Writeup / README that includes all the rubric points and how you addressed each one.  You can submit your writeup as markdown or pdf.  [Here](https://github.com/udacity/CarND-Vehicle-Detection/blob/master/writeup_template.md) is a template writeup for this project you can use as a guide and a starting point.  
+After playing with original dataset, found that it has bias towards black cars. Autti dataset solved this problem along with increasing performance of the classifier. I augment original dataset with 10000 car images and 40000 non-car images from Autti. By changing proportion of original and Autti dataset images in training samples you may fine tune classifier performance. You may get Autti dataset from here. This dataset contains of road images with labeled cars, pedestrians and other road participants. So it is needed to extract car and non-car images from original images.
 
-You're reading it!
-
-###Histogram of Oriented Gradients (HOG)
-
-####1. Explain how (and identify where in your code) you extracted HOG features from the training images.
-
-The code for this step is contained in the first code cell of the IPython notebook (or in lines # through # of the file called `some_file.py`).  
-
-I started by reading in all the `vehicle` and `non-vehicle` images.  Here is an example of one of each of the `vehicle` and `non-vehicle` classes:
-
-![alt text][image1]
-
-I then explored different color spaces and different `skimage.hog()` parameters (`orientations`, `pixels_per_cell`, and `cells_per_block`).  I grabbed random images from each of the two classes and displayed them to get a feel for what the `skimage.hog()` output looks like.
-
-Here is an example using the `YCrCb` color space and HOG parameters of `orientations=8`, `pixels_per_cell=(8, 8)` and `cells_per_block=(2, 2)`:
+https://github.com/GirijaB/CarND-Vehicle-Detection/blob/master/vehicle_detection.ipynb  In [4]: & In [5]:
 
 
-![alt text][image2]
+Histogram of Oriented Gradients (HOG)
 
-####2. Explain how you settled on your final choice of HOG parameters.
+After playing with picture pixels, histogram and HOG features I decided to use only little amount of HOG features. My feature vector consist of 128 components which I extract from grayscaled images, since grayscaled images contains all structure information. I beleive that it is better to detect cars by only structure information and avoid color information because cars may have big variety of coloring. Small amount of featues help to make the classifier faster while loosing a little amount of accuracy.
+My parameters of feature extraction are shown in result of cell 7:-
+https://github.com/GirijaB/CarND-Vehicle-Detection/blob/master/vehicle_detection.ipynb  In [7]: 
 
-I tried various combinations of parameters and...
+color_space = 'GRAY' # Can be GRAY, RGB, HSV, LUV, HLS, YUV, YCrCb
+orient = 8  # HOG orientations
+pix_per_cell = 16 # HOG pixels per cell
+cell_per_block = 1 # HOG cells per block
+hog_channel = 'ALL' # Can be 0, 1, 2, or "ALL"
+spatial_size = (16, 16) # Spatial binning dimensions
+hist_bins = 16    # Number of histogram bins
+spatial_feat = False # Spatial features on or off
+hist_feat = False # Histogram features on or off
+hog_feat = True # HOG features on or off
 
-####3. Describe how (and identify where in your code) you trained a classifier using your selected HOG features (and color features if you used them).
+SVM classifier
 
-I trained a linear SVM using...
+I decided to use SVM classifier with rbf kernel and default sklearn parameters. With my small amount of features it shows time performance about 4 frames per second for whole pipeline. After combining datasets I used 13791 cars and 48138 non-cars images for training. Resulting accuracy is about 98%. Also I used StandardScaler for feature normalization along resulting dataset. I found that it is really importaint step. It adds about 4% accuracy for my classifier.
 
-###Sliding Window Search
+Sliding windows
 
-####1. Describe how (and identify where in your code) you implemented a sliding window search.  How did you decide what scales to search and how much to overlap windows?
-
-I decided to search random window positions at random scales all over the image and came up with this (ok just kidding I didn't actually ;):
-
-![alt text][image3]
-
-####2. Show some examples of test images to demonstrate how your pipeline is working.  What did you do to optimize the performance of your classifier?
-
-Ultimately I searched on two scales using YCrCb 3-channel HOG features plus spatially binned color and histograms of color in the feature vector, which provided a nice result.  Here are some example images:
-
-![alt text][image4]
----
-
-### Video Implementation
-
-####1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (somewhat wobbly or unstable bounding boxes are ok as long as you are identifying the vehicles most of the time with minimal false positives.)
-Here's a [link to my video result](./project_video.mp4)
-
-
-####2. Describe how (and identify where in your code) you implemented some kind of filter for false positives and some method for combining overlapping bounding boxes.
-
-I recorded the positions of positive detections in each frame of the video.  From the positive detections I created a heatmap and then thresholded that map to identify vehicle positions.  I then used `scipy.ndimage.measurements.label()` to identify individual blobs in the heatmap.  I then assumed each blob corresponded to a vehicle.  I constructed bounding boxes to cover the area of each blob detected.  
-
-Here's an example result showing the heatmap from a series of frames of video, the result of `scipy.ndimage.measurements.label()` and the bounding boxes then overlaid on the last frame of video:
-
-### Here are six frames and their corresponding heatmaps:
-
-![alt text][image5]
-
-### Here is the output of `scipy.ndimage.measurements.label()` on the integrated heatmap from all six frames:
-![alt text][image6]
-
-### Here the resulting bounding boxes are drawn onto the last frame in the series:
-![alt text][image7]
+For searching cars in an input image I used sliding window technics. It means that I iterate over image area that could contain cars with approximately car sized box and try to classify whether box contain car or not. As cars may be of different sizes due to distance from a camera we need a several amount of box sizes for near and far cars. I use 3 square sliding window sizes of 128, 96 and 80 pixels side size. While iterating I use 50% window overlapping in horizontal and vertical directions. Here is an examples of sliding windows lattices which I use. One of sliding window drawn in blue on each image while rest of the lattice are drawn in black. For computational economy and additional robustness areas of sliding windows don't conver whole image but places where cars appearance is more probable.
 
 
 
----
+Estimation of car positions and sizes
 
-###Discussion
+After sliding window application we have hot boxes - sliding window positions that were classified as containing car. Number of hot boxes crowded at real cars positions along with less number of hot boxes crowded in false positives of classifier. We need to estimate real cars positions and sizes based on this information. I propose simple algorithm for that.
 
-####1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
+We have many less or more overlapped boxes and we need to join it around peaks to convert many overlapped boxes into smaller amount of not or slightly overlapped ones. Idea is take fist box (called average box) form input boxes and join it with all boxes that is close enough (here for two boxes: they need to overlap by 30% of area of any one of two) After joining two boxes we need to update average box (here just increasing size to cover both joining boxes). Loop while we are able to join futhermore. For left boxes repeat all procedure. As a result we get list of joined boxes, average boxes strengths, the number of boxes it was joined to. Based on this we may estimate average boxes size and positions as following:
 
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+    def get_box (self):
+        """Uses joined boxes information to compute
+        this average box representation as hot box.
+        This box has average center of all boxes and have
+        size of 2 standard deviation by x and y coordinates of its points
+
+	self.boxes is joined hot boxes
+        """
+        if len(self.boxes) > 1:
+            center = np.average (np.average (self.boxes, axis=1), axis=0).astype(np.int32).tolist()
+
+            # getting all x and y coordinates of
+            # all corners of joined boxes separately
+            xs = np.array(self.boxes) [:,:,0]
+            ys = np.array(self.boxes) [:,:,1]
+
+            half_width = int(np.std (xs))
+            half_height = int(np.std (ys))
+            return (
+                (
+                    center[0] - half_width,
+                    center[1] - half_height
+                ), (
+                    center[0] + half_width,
+                    center[1] + half_height
+                ))
+        else:
+            return self.boxes [0]
+I use thresholding by average boxes strength to filter out false positives. Here you can see examples of algorithm results. Overlapping by hotboxes shown as heat map where each pixel holds number of overlapped hot boxes.
+
+
+Video processing
+
+Same average boxes algorithm may be used to estimate cars base on last several frames of the video. We just need to accumulate hot boxes over number of last frames and then apply same algorithm here with higher threshold. See example of processed video at begining of the description. With described pipeline I get about 4 frames per second performance.
+
+Conclusion
+
+Detecting cars with SVM in sliding windows is interesting method but it has a number of disadvantages. While trying to make my classifier more quick I faced with problem that it triggers not only on cars but on other parts of an image that is far from car look like. So it doesn't generalizes well and produces lot of false positives in some situations. To struggle this I used bigger amount of non-car images for SVM training. Also sliding windows delays computation as it requires many classifier tries per image. Again for computational reduction not whole area of input image is scanned. So when road has another placement in the image like in strong curved turns or camera movements sliding windows may fail to detect cars.
+
+I think this is interesting approach for starting in this field. But it is not ready for production use. I think convolutional neural network approach may show more robustness and speed. As it could be easily accelerated via GPU. Also it may let to locate cars in just one try. For example we may ask CNN to calculate number of cars in the image. And by activated neurons locate positions of the cars. In that case SVM approach may help to generate additional samples for CNN training.
 
