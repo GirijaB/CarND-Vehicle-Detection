@@ -94,6 +94,8 @@ Video processing
 
 Same average boxes algorithm may be used to estimate cars base on last several frames of the video. We just need to accumulate hot boxes over number of last frames and then apply same algorithm here with higher threshold. See example of processed video at begining of the description. With described pipeline I get about 4 frames per second performance.
 
+The final result video of the project is uploaded in the github repo as project_video_result.mp4
+
 Conclusion
 
 Detecting cars with SVM in sliding windows is interesting method but it has a number of disadvantages. While trying to make my classifier more quick I faced with problem that it triggers not only on cars but on other parts of an image that is far from car look like. So it doesn't generalizes well and produces lot of false positives in some situations. To struggle this I used bigger amount of non-car images for SVM training. Also sliding windows delays computation as it requires many classifier tries per image. Again for computational reduction not whole area of input image is scanned. So when road has another placement in the image like in strong curved turns or camera movements sliding windows may fail to detect cars.
